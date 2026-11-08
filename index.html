@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오늘 어디 갈까? 아들과 나들이</title>
+<style>
+  :root{
+    --bg:#f3f6fb; --card:#ffffff; --ink:#1b2430; --mute:#6a7686; --line:#e4e9f1;
+    --accent:#3b82f6; --accent2:#8b5cf6; --good:#16a34a; --warn:#f59e0b; --bad:#ef4444;
+    --in:#e0ecff; --in-ink:#1d4ed8; --out:#dcfce7; --out-ink:#15803d; --mix:#fef3c7; --mix-ink:#a16207;
+    --shadow:0 6px 24px rgba(30,60,120,.08);
+    --hero1:#4f9bff; --hero2:#7c5cff;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#0e131b;--card:#171e29;--ink:#e9eef5;--mute:#93a0b1;--line:#263041;
+      --in:#1e2f55;--in-ink:#9cc1ff;--out:#17382a;--out-ink:#7ee0a6;--mix:#3d3115;--mix-ink:#f5cf6b;
+      --shadow:0 6px 24px rgba(0,0,0,.35)}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;line-height:1.5;min-height:100vh}
+  main{max-width:760px;margin:0 auto;padding:0 16px 40px}
+
+  /* 히어로 */
+  .hero{position:relative;margin:0 -16px 16px;padding:28px 20px 72px;color:#fff;overflow:hidden;
+    background:linear-gradient(135deg,var(--hero1),var(--hero2));border-radius:0 0 28px 28px;transition:background .6s}
+  .hero::before,.hero::after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.12)}
+  .hero::before{width:220px;height:220px;right:-60px;top:-80px}
+  .hero::after{width:140px;height:140px;left:-40px;bottom:-60px}
+  .hero h1{margin:0;font-size:1.55rem;letter-spacing:-.02em;position:relative}
+  .hero p{margin:4px 0 0;opacity:.9;font-size:.9rem;position:relative}
+  .hero.sunny{--hero1:#ffb347;--hero2:#ff7e5f}
+  .hero.cloudy{--hero1:#6ea8ff;--hero2:#8e7bff}
+  .hero.rainy{--hero1:#4b6cb7;--hero2:#182848}
+  .hero.snowy{--hero1:#74b9ff;--hero2:#a29bfe}
+  .hero.cold{--hero1:#5b8def;--hero2:#6c5ce7}
+
+  /* 날씨 카드 */
+  .weather{margin-top:-56px;position:relative;background:var(--card);border-radius:22px;padding:18px 18px 16px;box-shadow:var(--shadow);border:1px solid var(--line)}
+  .w-top{display:flex;align-items:center;gap:14px}
+  .w-ico{font-size:3.2rem;line-height:1}
+  .w-temp{font-size:2.6rem;font-weight:800;letter-spacing:-.03em;line-height:1}
+  .w-sub{color:var(--mute);font-size:.9rem;margin-top:2px}
+  .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:14px}
+  .chip{background:var(--bg);border-radius:12px;padding:8px 10px;font-size:.82rem}
+  .chip b{display:block;font-size:.95rem;margin-top:1px}
+  .chip .t{color:var(--mute);font-size:.72rem}
+  .verdict{margin-top:14px;padding:12px 14px;border-radius:14px;font-weight:600;font-size:.95rem;background:var(--out);color:var(--out-ink)}
+  .verdict.mid{background:var(--mix);color:var(--mix-ink)}
+  .verdict.low{background:var(--in);color:var(--in-ink)}
+  .verdict small{display:block;font-weight:400;opacity:.85;margin-top:2px}
+  .loading{color:var(--mute);padding:6px 0;display:flex;align-items:center;gap:10px}
+  .spin{width:18px;height:18px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .err{color:var(--bad);font-weight:600}
+  .help{color:var(--mute);font-size:.8rem;margin-top:6px}
+  .btn{margin-top:10px;padding:8px 18px;border-radius:99px;border:0;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+
+  /* 필터 */
+  .section-title{display:flex;justify-content:space-between;align-items:baseline;margin:22px 2px 10px}
+  .section-title h2{margin:0;font-size:1.1rem}
+  .section-title span{color:var(--mute);font-size:.8rem}
+  .filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+  .filters::-webkit-scrollbar{display:none}
+  .filters button{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 16px;border-radius:99px;cursor:pointer;font-size:.88rem;font-weight:500;transition:.15s}
+  .filters button.on{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(80,90,230,.35)}
+
+  /* 장소 카드 */
+  .list{display:grid;gap:12px;margin-top:12px}
+  .place{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow);display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:start}
+  .place.top{border:2px solid var(--accent);background:linear-gradient(180deg,rgba(59,130,246,.07),transparent 60%),var(--card)}
+  .ico{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;font-size:1.8rem;background:var(--bg)}
+  .place h3{margin:0;font-size:1.05rem;letter-spacing:-.01em}
+  .crown{display:inline-block;font-size:.72rem;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));padding:1px 9px;border-radius:99px;margin-right:6px;vertical-align:middle}
+  .tags{margin-top:5px;display:flex;flex-wrap:wrap;gap:5px}
+  .tag{font-size:.72rem;padding:2px 9px;border-radius:99px;background:var(--bg);color:var(--mute)}
+  .tag.in{background:var(--in);color:var(--in-ink)} .tag.out{background:var(--out);color:var(--out-ink)} .tag.mix{background:var(--mix);color:var(--mix-ink)}
+  .tip{margin:8px 0 0;font-size:.88rem}
+  .why{margin-top:6px;font-size:.82rem;color:var(--accent);font-weight:600}
+  .why.bad{color:var(--bad)}
+  .links{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+  .links a{font-size:.78rem;text-decoration:none;color:var(--ink);border:1px solid var(--line);padding:4px 11px;border-radius:99px}
+  .links a:hover{border-color:var(--accent);color:var(--accent)}
+  .score{text-align:center}
+  .ring{--p:0;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;
+    background:conic-gradient(var(--c,var(--accent)) calc(var(--p)*1%),var(--line) 0)}
+  .ring i{font-style:normal;width:42px;height:42px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-weight:800;font-size:.9rem}
+  .score small{color:var(--mute);font-size:.68rem}
+  .empty{text-align:center;color:var(--mute);padding:30px 0}
+  .note{color:var(--mute);font-size:.76rem;margin-top:22px;text-align:center}
+  @media(max-width:460px){
+    .place{grid-template-columns:48px 1fr;}
+    .ico{width:48px;height:48px;font-size:1.5rem}
+    .score{grid-column:1 / -1;display:flex;align-items:center;gap:10px;text-align:left}
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero" id="hero">
+    <h1>🚗 오늘 어디 갈까?</h1>
+    <p>의왕시청 출발 · 8살 아들과 함께하는 나들이</p>
+  </header>
+
+  <section class="weather" id="weatherCard">
+    <div class="loading"><div class="spin"></div>날씨 확인 중…</div>
+  </section>
+
+  <div class="section-title"><h2>오늘의 추천 장소</h2><span id="count"></span></div>
+  <nav class="filters" id="filters">
+    <button data-f="all" class="on">전체</button>
+    <button data-f="in">🏠 실내</button>
+    <button data-f="out">🌳 야외</button>
+    <button data-f="near">⚡ 30분 이내</button>
+  </nav>
+
+  <div class="list" id="list"></div>
+  <p class="note">이동시간은 직선거리 기반 추정치(시속 약 40km 가정)이며, 운영시간·휴관일·요금은 방문 전 꼭 확인하세요.<br>날씨 데이터: Open-Meteo</p>
+</main>
+
+<script>
+// ---------- 설정 ----------
+const HOME = {lat:37.3448, lon:126.9683}; // 의왕시청 근처
+// type: in(실내) / out(야외) / mix(혼합) · water: 물놀이 · age: 8세 적합도(1~5)
+const PLACES = [
+  {name:"한국철도박물관", e:"🚂", type:"in", lat:37.3418, lon:126.9548, stay:"2~3시간", parking:"무료 주차장", age:5, tip:"기차 실물 전시·시뮬레이터. 실내 중심이고 야외 전시도 있음", q:"한국철도박물관"},
+  {name:"왕송호수공원 · 레일바이크", e:"🚴", type:"out", lat:37.3175, lon:126.9790, stay:"2~3시간", parking:"공원 주차장", age:5, tip:"호수 산책 + 레일바이크. 맑은 날 추천", q:"왕송호수 레일바이크"},
+  {name:"백운호수", e:"🦆", type:"out", lat:37.3869, lon:126.9741, stay:"1~2시간", parking:"주변 유료/무료 혼재", age:3, tip:"호수 산책과 카페. 짧게 다녀오기 좋음", q:"백운호수"},
+  {name:"모락산 둘레길", e:"🌲", type:"out", lat:37.3600, lon:126.9830, stay:"1~2시간", parking:"입구 소규모", age:3, tip:"가벼운 숲길 산책", q:"모락산"},
+  {name:"국립과천과학관", e:"🔬", type:"mix", lat:37.4348, lon:127.0098, stay:"3~4시간", parking:"유료(대형 주차장)", age:5, tip:"실내 전시 중심, 야외 공룡·곤충 공간도 있음. 예약 필요 전시 확인", q:"국립과천과학관"},
+  {name:"서울대공원 (동물원)", e:"🦒", type:"out", lat:37.4300, lon:127.0190, stay:"3~5시간", parking:"유료(대형)", age:5, tip:"넓어서 많이 걷지만 아이들이 좋아함. 우천 시 비추천", q:"서울대공원"},
+  {name:"서울랜드", e:"🎢", type:"out", lat:37.4337, lon:127.0200, stay:"4~6시간", parking:"유료", age:4, tip:"놀이공원. 맑고 선선한 날 추천", q:"서울랜드"},
+  {name:"평촌중앙공원", e:"🛴", type:"out", lat:37.3895, lon:126.9510, stay:"1~2시간", parking:"주변 공영", age:3, tip:"가까운 도심 공원, 자전거·킥보드", q:"평촌중앙공원"},
+  {name:"안양예술공원", e:"🏞️", type:"out", lat:37.4217, lon:126.9500, stay:"1~2시간", parking:"공영 주차장", age:3, tip:"계곡 산책, 여름 물놀이 가능(상황 확인)", q:"안양예술공원", water:true},
+  {name:"스타필드 안양", e:"🛍️", type:"in", lat:37.3912, lon:126.9526, stay:"3~4시간", parking:"무료(일정 조건)", age:4, tip:"쇼핑몰 안 키즈·체험 공간. 비 오는 날 만능", q:"스타필드 안양"},
+  {name:"수원 광교호수공원", e:"🚲", type:"out", lat:37.2850, lon:127.0650, stay:"2시간", parking:"공영", age:3, tip:"넓은 호수 산책로, 자전거", q:"광교호수공원"},
+  {name:"국립중앙박물관 어린이박물관", e:"🏛️", type:"in", lat:37.5240, lon:126.9803, stay:"2~3시간", parking:"유료", age:4, tip:"체험형 전시. 예약제 여부 확인 필요", q:"국립중앙박물관 어린이박물관"},
+  {name:"어린이대공원", e:"🐘", type:"mix", lat:37.5480, lon:127.0810, stay:"3~4시간", parking:"유료", age:5, tip:"동물원·놀이시설·잔디밭", q:"서울 어린이대공원"},
+  {name:"롯데월드 어드벤처", e:"🎡", type:"mix", lat:37.5110, lon:127.0980, stay:"5~7시간", parking:"유료(혼잡)", age:4, tip:"실내 + 야외 혼합. 주말 혼잡", q:"롯데월드 어드벤처"}
+];
+const TYPE_LABEL = {in:"실내", out:"야외", mix:"실내+야외"};
+
+// ---------- 유틸 ----------
+const km = (a,b)=>{const R=6371,r=x=>x*Math.PI/180,dLat=r(b.lat-a.lat),dLon=r(b.lon-a.lon);
+  const h=Math.sin(dLat/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(h));};
+const driveMin = p => Math.round(km(HOME,p)*1.35/40*60);
+const wcode = c => c===0?["맑음","☀️"]:c<=3?["구름","⛅"]:c<=48?["안개","🌫️"]:c<=57?["이슬비","🌦️"]:c<=67?["비","🌧️"]:c<=77?["눈","❄️"]:c<=82?["소나기","🌦️"]:c<=86?["눈","❄️"]:["뇌우","⛈️"];
+const $ = id => document.getElementById(id);
+
+// ---------- 날씨 ----------
+async function getJSON(url, tries=3){
+  let last;
+  for (let i=0;i<tries;i++){
+    try{
+      // 미리보기 환경은 fetch 옵션(AbortSignal 등)을 복제하지 못하므로 옵션 없이 호출하고 타임아웃은 race로 처리
+      let timer;
+      const timeout = new Promise((_,rej)=>{ timer = setTimeout(()=>rej(new Error("시간 초과")), 10000); });
+      const r = await Promise.race([fetch(url), timeout]); clearTimeout(timer);
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      return await r.json();
+    }catch(e){ last = e; await new Promise(res=>setTimeout(res, 800*(i+1))); }
+  }
+  throw last;
+}
+async function loadWeather(){
+  const f = `https://api.open-meteo.com/v1/forecast?latitude=${HOME.lat}&longitude=${HOME.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=precipitation_probability&timezone=Asia%2FSeoul&forecast_days=1`;
+  const a = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${HOME.lat}&longitude=${HOME.lon}&current=pm10,pm2_5&timezone=Asia%2FSeoul`;
+  const [w, air] = await Promise.all([getJSON(f), getJSON(a,1).catch(()=>null)]);
+  const now = new Date().getHours();
+  const probs = w.hourly.precipitation_probability.slice(now, now+6);
+  return {
+    temp:w.current.temperature_2m, feel:w.current.apparent_temperature, code:w.current.weather_code,
+    wind:w.current.wind_speed_10m, rain:Math.max(...probs,0),
+    pm10:air?.current?.pm10 ?? null, pm25:air?.current?.pm2_5 ?? null
+  };
+}
+
+function judge(w){
+  let s = 100, why = [];
+  const wet = w.code>=51 || w.rain>=50;
+  if (wet){ s -= 60; why.push("비/눈 가능성"); }
+  else if (w.rain>=30){ s -= 20; why.push("강수확률 약간 있음"); }
+  if (w.feel>=31){ s -= 40; why.push("폭염"); }
+  else if (w.feel>=28){ s -= 15; why.push("더운 편"); }
+  if (w.feel<=0){ s -= 40; why.push("한파"); }
+  else if (w.feel<=8){ s -= 35; why.push("쌀쌀함"); }
+  if (w.wind>=10){ s -= 15; why.push("바람 강함"); }
+  const pmBad = (w.pm25!=null && w.pm25>35) || (w.pm10!=null && w.pm10>80);
+  const pmWorst = (w.pm25!=null && w.pm25>75) || (w.pm10!=null && w.pm10>150);
+  if (pmWorst){ s -= 50; why.push("미세먼지 매우 나쁨"); }
+  else if (pmBad){ s -= 30; why.push("미세먼지 나쁨"); }
+  s = Math.max(0, s);
+  const text = s>=70 ? "야외 활동하기 좋은 날씨예요 🌳" : s>=40 ? "야외도 가능하지만 실내와 섞는 걸 추천해요" : "오늘은 실내 위주로 가는 게 좋아요 🏠";
+  return {score:s, why, text, level: s>=70?"":s>=40?"mid":"low"};
+}
+
+// ---------- 추천 ----------
+function rank(w, j){
+  const out = j.score;
+  return PLACES.map(p=>{
+    const t = driveMin(p);
+    const fit = p.type==="in" ? 100-out : p.type==="out" ? out : 70;
+    let s = fit*0.6 + p.age*4 - Math.max(0,t-30)*0.35;
+    if (p.water && w.feel>=28 && out>=40) s += 15;
+    s = Math.round(Math.max(0,Math.min(100,s)));
+    const reasons = []; let bad = false;
+    if (p.type==="in" && out<70) reasons.push("날씨 영향 없이 즐길 수 있어요");
+    if (p.type==="out" && out>=70) reasons.push("날씨가 좋아 야외 추천");
+    if (p.type==="out" && out<40){ reasons.push("오늘 날씨엔 비추천 ⚠️"); bad = true; }
+    if (p.type==="mix") reasons.push("실내·야외 모두 가능");
+    if (t<=20) reasons.push("가까워요");
+    return {...p, t, s, reasons, bad};
+  }).sort((a,b)=>b.s-a.s);
+}
+
+// ---------- 렌더 ----------
+const state = {results:[], filter:"all"};
+
+function renderWeather(w,j){
+  const [desc,ico] = wcode(w.code);
+  const grade = (v,bad,worse)=> v==null?"-": v>worse?"매우 나쁨": v>bad?"나쁨":"좋음~보통";
+  // 히어로 배경을 날씨에 맞게
+  const hero = $("hero");
+  hero.className = "hero " + (w.code>=95||(w.code>=51&&w.code<=67)||(w.code>=80&&w.code<=82)?"rainy": (w.code>=71&&w.code<=86)?"snowy": w.feel<=8?"cold": w.code===0?"sunny":"cloudy");
+  $("weatherCard").innerHTML = `
+    <div class="w-top">
+      <div class="w-ico">${ico}</div>
+      <div><div class="w-temp">${Math.round(w.temp)}°</div><div class="w-sub">${desc} · 체감 ${Math.round(w.feel)}°C</div></div>
+    </div>
+    <div class="chips">
+      <div class="chip"><span class="t">☔ 강수확률(6시간)</span><b>${w.rain}%</b></div>
+      <div class="chip"><span class="t">💨 바람</span><b>${w.wind.toFixed(1)} km/h</b></div>
+      <div class="chip"><span class="t">😷 초미세먼지</span><b>${w.pm25==null?"-":Math.round(w.pm25)+" · "+grade(w.pm25,35,75)}</b></div>
+      <div class="chip"><span class="t">🌫️ 미세먼지</span><b>${w.pm10==null?"-":Math.round(w.pm10)+" · "+grade(w.pm10,80,150)}</b></div>
+    </div>
+    <div class="verdict ${j.level}">${j.text}${j.why.length?`<small>${j.why.join(" · ")}</small>`:""}</div>`;
+}
+
+function renderList(){
+  const f = state.filter;
+  const items = state.results.filter(p => f==="all" || (f==="near"? p.t<=30 : f==="in"? p.type!=="out" : p.type!=="in"));
+  $("count").textContent = items.length + "곳";
+  $("list").innerHTML = items.map((p,i)=>{
+    const c = p.s>=65?"var(--good)":p.s>=45?"var(--warn)":"var(--bad)";
+    return `
+    <article class="place ${i===0?"top":""}">
+      <div class="ico">${p.e}</div>
+      <div>
+        <h3>${i===0?'<span class="crown">오늘의 추천</span>':""}${p.name}</h3>
+        <div class="tags">
+          <span class="tag ${p.type}">${TYPE_LABEL[p.type]}</span>
+          <span class="tag">🚗 약 ${p.t}분</span>
+          <span class="tag">⏱ ${p.stay}</span>
+          <span class="tag">🅿️ ${p.parking}</span>
+        </div>
+        <p class="tip">${p.tip}</p>
+        ${p.reasons.length?`<div class="why ${p.bad?"bad":""}">${p.reasons.join(" · ")}</div>`:""}
+        <div class="links">
+          <a target="_blank" rel="noopener" href="https://map.kakao.com/?q=${encodeURIComponent(p.q)}">카카오맵</a>
+          <a target="_blank" rel="noopener" href="https://map.naver.com/p/search/${encodeURIComponent(p.q)}">네이버지도</a>
+          <a target="_blank" rel="noopener" href="https://www.google.com/search?q=${encodeURIComponent(p.q+" 운영시간")}">운영시간</a>
+        </div>
+      </div>
+      <div class="score"><div class="ring" style="--p:${p.s};--c:${c}"><i>${p.s}</i></div><small>추천점수</small></div>
+    </article>`;
+  }).join("") || '<div class="empty">조건에 맞는 장소가 없어요 🥲</div>';
+}
+
+$("filters").addEventListener("click", e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  state.filter = b.dataset.f;
+  document.querySelectorAll("#filters button").forEach(x=>x.classList.toggle("on", x===b));
+  renderList();
+});
+
+async function init(){
+  // 날씨를 기다리는 동안에도 목록을 먼저 보여준다
+  state.results = rank({feel:20,wind:0}, {score:70});
+  renderList();
+  $("weatherCard").innerHTML = '<div class="loading"><div class="spin"></div>날씨 확인 중…</div>';
+  try{
+    const w = await loadWeather(), j = judge(w);
+    renderWeather(w,j);
+    state.results = rank(w,j);
+    renderList();
+  }catch(e){
+    $("weatherCard").innerHTML = `<div class="err">날씨를 불러오지 못했어요 (${e.message})</div>
+      <div class="help">• 앱 내 미리보기가 아니라 <b>크롬에서 직접</b> 열어 주세요 (run.bat 실행).<br>• 광고 차단 확장 프로그램이 api.open-meteo.com 을 막고 있지 않은지 확인하세요.<br>• 아래 목록은 날씨 없이 기본 순서(맑음 가정)입니다.</div>
+      <button class="btn" onclick="init()">다시 시도</button>`;
+  }
+}
+init();
+</script>
+</body>
+</html>
