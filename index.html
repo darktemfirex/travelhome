@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>오늘 어디 갈까? 아들과 나들이</title>
+<script>try{var t=localStorage.getItem("th-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <style>
   :root{
     --bg:#f3f6fb; --card:#ffffff; --ink:#1b2430; --mute:#6a7686; --line:#e4e9f1;
@@ -12,8 +13,12 @@
     --shadow:0 6px 24px rgba(30,60,120,.08);
     --hero1:#4f9bff; --hero2:#7c5cff;
   }
+  :root{color-scheme:light}
+  :root[data-theme="dark"]{color-scheme:dark;--bg:#0e131b;--card:#171e29;--ink:#e9eef5;--mute:#93a0b1;--line:#263041;
+      --in:#1e2f55;--in-ink:#9cc1ff;--out:#17382a;--out-ink:#7ee0a6;--mix:#3d3115;--mix-ink:#f5cf6b;
+      --shadow:0 6px 24px rgba(0,0,0,.35)}
   @media (prefers-color-scheme:dark){
-    :root{--bg:#0e131b;--card:#171e29;--ink:#e9eef5;--mute:#93a0b1;--line:#263041;
+    :root:not([data-theme="light"]){color-scheme:dark;--bg:#0e131b;--card:#171e29;--ink:#e9eef5;--mute:#93a0b1;--line:#263041;
       --in:#1e2f55;--in-ink:#9cc1ff;--out:#17382a;--out-ink:#7ee0a6;--mix:#3d3115;--mix-ink:#f5cf6b;
       --shadow:0 6px 24px rgba(0,0,0,.35)}
   }
@@ -34,6 +39,12 @@
   .hero.rainy{--hero1:#4b6cb7;--hero2:#182848}
   .hero.snowy{--hero1:#74b9ff;--hero2:#a29bfe}
   .hero.cold{--hero1:#5b8def;--hero2:#6c5ce7}
+
+  .hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;position:relative}
+  .theme-btn{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.2);color:#fff;font-size:1.2rem;cursor:pointer;line-height:1}
+  .pick{display:flex;gap:8px;margin-top:14px;position:relative;flex-wrap:wrap}
+  .pick select{flex:1 1 130px;min-width:0;padding:9px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.5);background:var(--card);color:var(--ink);font-size:.92rem;font-weight:600}
+  .src{color:var(--mute);font-size:.76rem;margin:6px 2px 0}
 
   /* 날씨 카드 */
   .weather{margin-top:-56px;position:relative;background:var(--card);border-radius:22px;padding:18px 18px 16px;box-shadow:var(--shadow);border:1px solid var(--line)}
@@ -98,8 +109,17 @@
 <body>
 <main>
   <header class="hero" id="hero">
-    <h1>🚗 오늘 어디 갈까?</h1>
-    <p>의왕시청 출발 · 8살 아들과 함께하는 나들이</p>
+    <div class="hero-top">
+      <div>
+        <h1>🚗 오늘 어디 갈까?</h1>
+        <p id="heroSub"></p>
+      </div>
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="다크/라이트 모드 전환"></button>
+    </div>
+    <div class="pick">
+      <select id="selSido" aria-label="시도 선택"></select>
+      <select id="selCity" aria-label="시 선택"></select>
+    </div>
   </header>
 
   <section class="weather" id="weatherCard">
@@ -115,14 +135,35 @@
   </nav>
 
   <div class="list" id="list"></div>
-  <p class="note">이동시간은 직선거리 기반 추정치(시속 약 40km 가정)이며, 운영시간·휴관일·요금은 방문 전 꼭 확인하세요.<br>날씨 데이터: Open-Meteo</p>
+  <p class="src" id="src"></p>
+  <p class="note">이동시간은 직선거리 기반 추정치(시속 약 40km 가정)이며, 운영시간·휴관일·요금은 방문 전 꼭 확인하세요.<br>날씨 데이터: Open-Meteo · 주변 장소(의왕 외 지역): OpenStreetMap</p>
 </main>
 
 <script>
 // ---------- 설정 ----------
-const HOME = {lat:37.3448, lon:126.9683}; // 의왕시청 근처
+// 시도별 시청 좌표 (기준점). 첫 화면은 의왕시청.
+const REGIONS = {
+  "서울특별시":[["서울",37.5663,126.9779]],
+  "부산광역시":[["부산",35.1798,129.0750]],
+  "대구광역시":[["대구",35.8714,128.6014]],
+  "인천광역시":[["인천",37.4563,126.7052]],
+  "광주광역시":[["광주",35.1601,126.8514]],
+  "대전광역시":[["대전",36.3504,127.3845]],
+  "울산광역시":[["울산",35.5384,129.3114]],
+  "세종특별자치시":[["세종",36.4800,127.2890]],
+  "경기도":[["의왕",37.3448,126.9683],["수원",37.2636,127.0286],["성남",37.4200,127.1267],["안양",37.3943,126.9568],["과천",37.4292,126.9876],["군포",37.3616,126.9352],["용인",37.2411,127.1776],["고양",37.6584,126.8320],["부천",37.5034,126.7660],["안산",37.3219,126.8309],["화성",37.1995,126.8312],["평택",36.9921,127.1127],["파주",37.7599,126.7800],["남양주",37.6360,127.2165],["하남",37.5393,127.2148],["광명",37.4786,126.8646],["시흥",37.3800,126.8030],["김포",37.6153,126.7156]],
+  "강원특별자치도":[["춘천",37.8813,127.7298],["강릉",37.7519,128.8761],["원주",37.3422,127.9202],["속초",38.2070,128.5918]],
+  "충청북도":[["청주",36.6424,127.4890],["충주",36.9910,127.9259]],
+  "충청남도":[["천안",36.8151,127.1139],["아산",36.7898,127.0018],["공주",36.4465,127.1190]],
+  "전북특별자치도":[["전주",35.8242,127.1480],["군산",35.9676,126.7369],["익산",35.9483,126.9577]],
+  "전라남도":[["목포",34.8118,126.3922],["여수",34.7604,127.6622],["순천",34.9506,127.4875]],
+  "경상북도":[["포항",36.0190,129.3435],["경주",35.8562,129.2247],["안동",36.5684,128.7294],["구미",36.1195,128.3446]],
+  "경상남도":[["창원",35.2280,128.6811],["진주",35.1800,128.1076],["통영",34.8544,128.4332],["김해",35.2285,128.8894]],
+  "제주특별자치도":[["제주",33.4996,126.5312],["서귀포",33.2541,126.5601]]
+};
+let HOME = {lat:37.3448, lon:126.9683, label:"의왕시청"};
 // type: in(실내) / out(야외) / mix(혼합) · water: 물놀이 · age: 8세 적합도(1~5)
-const PLACES = [
+const CURATED = [
   {name:"한국철도박물관", e:"🚂", type:"in", lat:37.3418, lon:126.9548, stay:"2~3시간", parking:"무료 주차장", age:5, tip:"기차 실물 전시·시뮬레이터. 실내 중심이고 야외 전시도 있음", q:"한국철도박물관"},
   {name:"왕송호수공원 · 레일바이크", e:"🚴", type:"out", lat:37.3175, lon:126.9790, stay:"2~3시간", parking:"공원 주차장", age:5, tip:"호수 산책 + 레일바이크. 맑은 날 추천", q:"왕송호수 레일바이크"},
   {name:"백운호수", e:"🦆", type:"out", lat:37.3869, lon:126.9741, stay:"1~2시간", parking:"주변 유료/무료 혼재", age:3, tip:"호수 산책과 카페. 짧게 다녀오기 좋음", q:"백운호수"},
@@ -138,6 +179,7 @@ const PLACES = [
   {name:"어린이대공원", e:"🐘", type:"mix", lat:37.5480, lon:127.0810, stay:"3~4시간", parking:"유료", age:5, tip:"동물원·놀이시설·잔디밭", q:"서울 어린이대공원"},
   {name:"롯데월드 어드벤처", e:"🎡", type:"mix", lat:37.5110, lon:127.0980, stay:"5~7시간", parking:"유료(혼잡)", age:4, tip:"실내 + 야외 혼합. 주말 혼잡", q:"롯데월드 어드벤처"}
 ];
+let PLACES = CURATED; // 선택 지역에 맞게 교체됨
 const TYPE_LABEL = {in:"실내", out:"야외", mix:"실내+야외"};
 
 // ---------- 유틸 ----------
@@ -273,23 +315,139 @@ $("filters").addEventListener("click", e=>{
   renderList();
 });
 
+// ---------- 주변 장소 (OpenStreetMap Overpass) ----------
+const OVERPASS = ["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
+const CAT = {
+  zoo:{e:"🦁",type:"out",stay:"3~4시간",age:5,tip:"동물원 · 아이들이 좋아해요. 우천 시 비추천"},
+  aquarium:{e:"🐠",type:"in",stay:"2~3시간",age:5,tip:"수족관 · 날씨 영향 없이 즐길 수 있어요"},
+  theme_park:{e:"🎢",type:"out",stay:"4~6시간",age:4,tip:"놀이공원 · 맑고 선선한 날 추천"},
+  water_park:{e:"🏊",type:"out",stay:"3~4시간",age:4,tip:"물놀이 시설 · 더운 날 추천",water:true},
+  museum:{e:"🏛️",type:"in",stay:"1~2시간",age:3,tip:"박물관/전시 · 휴관일·예약 여부 확인"},
+  park:{e:"🌳",type:"out",stay:"1~2시간",age:3,tip:"공원 산책 · 자전거·킥보드 타기 좋아요"},
+  attraction:{e:"📍",type:"mix",stay:"1~2시간",age:3,tip:"가볼 만한 명소"}
+};
+function catOf(t){
+  if (t.tourism==="zoo") return "zoo";
+  if (t.tourism==="aquarium") return "aquarium";
+  if (t.tourism==="theme_park") return "theme_park";
+  if (t.leisure==="water_park") return "water_park";
+  if (t.tourism==="museum") return "museum";
+  if (t.leisure==="park"||t.leisure==="nature_reserve") return "park";
+  if (t.tourism==="attraction") return "attraction";
+  return null;
+}
+async function overpass(query){
+  let last;
+  for (const ep of OVERPASS){
+    try{ return await getJSON(ep+"?data="+encodeURIComponent(query),1); }catch(e){ last=e; }
+  }
+  throw last;
+}
+async function loadNearby(c){
+  const key = "th-near-"+c.lat.toFixed(3)+","+c.lon.toFixed(3);
+  try{ const hit = JSON.parse(localStorage.getItem(key)||"null"); if(hit && Date.now()-hit.t<7*864e5) return hit.v; }catch(e){}
+  const a = `(around:25000,${c.lat},${c.lon})`;
+  const q = `[out:json][timeout:25];(
+    nwr["tourism"~"^(zoo|aquarium|theme_park|museum)$"]["name"]${a};
+    nwr["leisure"="water_park"]["name"]${a};
+    nwr["leisure"~"^(park|nature_reserve)$"]["name"]["wikidata"]${a};
+    nwr["tourism"="attraction"]["name"]["wikidata"]${a};
+  );out center tags 250;`;
+  const d = await overpass(q), seen = new Set(), out = [];
+  for (const el of d.elements||[]){
+    const t = el.tags||{}, name = t["name:ko"]||t.name, cat = catOf(t);
+    const lat = el.lat ?? el.center?.lat, lon = el.lon ?? el.center?.lon;
+    if (!name || !cat || lat==null || !/[가-힣]/.test(name) || seen.has(name)) continue;
+    seen.add(name);
+    const base = CAT[cat];
+    out.push({name, e:base.e, type:base.type, lat, lon, stay:base.stay, parking:"현장/주변 확인",
+      age:/어린이|과학|체험|키즈/.test(name)?5:base.age, tip:base.tip, q:name, water:!!base.water, _p:(t.wikidata?2:0)+(cat==="park"||cat==="attraction"?0:1)});
+  }
+  // 가까운 곳 + 비중 높은 곳 우선으로 40개만
+  out.sort((x,y)=>(y._p*8 - km(c,y)*0.6) - (x._p*8 - km(c,x)*0.6));
+  const v = out.slice(0,40);
+  try{ localStorage.setItem(key, JSON.stringify({t:Date.now(),v})); }catch(e){}
+  return v;
+}
+
+// ---------- 지역/테마 ----------
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+};
+let token = 0;
+const curatedNear = () => CURATED.filter(p=>km(HOME,p)<=60);
+
+function applyTheme(t){
+  if (t) document.documentElement.setAttribute("data-theme", t);
+  const dark = document.documentElement.getAttribute("data-theme")==="dark" ||
+    (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme:dark)").matches);
+  $("themeBtn").textContent = dark ? "☀️" : "🌙";
+  $("themeBtn").title = dark ? "라이트 모드로" : "다크 모드로";
+  return dark;
+}
+$("themeBtn").addEventListener("click", ()=>{
+  const dark = applyTheme(); const next = dark ? "light" : "dark";
+  store.set("th-theme", next); applyTheme(next);
+});
+
+function fillSido(sel){
+  $("selSido").innerHTML = Object.keys(REGIONS).map(n=>`<option ${n===sel?"selected":""}>${n}</option>`).join("");
+}
+function fillCity(sido, sel){
+  $("selCity").innerHTML = REGIONS[sido].map(c=>`<option value="${c[0]}" ${c[0]===sel?"selected":""}>${c[0]}${sido==="세종특별자치시"?"":"시"}청 기준</option>`).join("");
+}
+function setRegion(sido, city){
+  const c = REGIONS[sido].find(x=>x[0]===city) || REGIONS[sido][0];
+  HOME = {lat:c[1], lon:c[2], label:c[0]+"시청"};
+  store.set("th-region", JSON.stringify([sido,c[0]]));
+  $("heroSub").textContent = `${HOME.label} 출발 · 8살 아들과 함께하는 나들이`;
+  return init();
+}
+$("selSido").addEventListener("change", e=>{ fillCity(e.target.value); setRegion(e.target.value, $("selCity").value); });
+$("selCity").addEventListener("change", ()=> setRegion($("selSido").value, $("selCity").value));
+
 async function init(){
-  // 날씨를 기다리는 동안에도 목록을 먼저 보여준다
+  const my = ++token;
+  // 큐레이션 목록(수도권 근처)을 먼저 보여주고, 날씨와 주변 장소를 비동기로 채운다
+  PLACES = curatedNear();
   state.results = rank({feel:20,wind:0}, {score:70});
   renderList();
+  $("src").textContent = "";
   $("weatherCard").innerHTML = '<div class="loading"><div class="spin"></div>날씨 확인 중…</div>';
-  try{
-    const w = await loadWeather(), j = judge(w);
-    renderWeather(w,j);
-    state.results = rank(w,j);
-    renderList();
-  }catch(e){
-    $("weatherCard").innerHTML = `<div class="err">날씨를 불러오지 못했어요 (${e.message})</div>
+
+  let w=null, j=null;
+  const weatherP = loadWeather().then(x=>{ if(my!==token) return; w=x; j=judge(x); renderWeather(w,j); state.results=rank(w,j); renderList(); })
+    .catch(e=>{ if(my!==token) return;
+      $("weatherCard").innerHTML = `<div class="err">날씨를 불러오지 못했어요 (${e.message})</div>
       <div class="help">• 앱 내 미리보기가 아니라 <b>크롬에서 직접</b> 열어 주세요 (run.bat 실행).<br>• 광고 차단 확장 프로그램이 api.open-meteo.com 을 막고 있지 않은지 확인하세요.<br>• 아래 목록은 날씨 없이 기본 순서(맑음 가정)입니다.</div>
-      <button class="btn" onclick="init()">다시 시도</button>`;
+      <button class="btn" onclick="init()">다시 시도</button>`; });
+
+  // 큐레이션이 충분하지 않은 지역은 OpenStreetMap에서 주변 장소를 가져온다
+  if (PLACES.length < 8){
+    $("src").textContent = `${HOME.label} 주변 장소를 찾는 중…`;
+    try{
+      const near = await loadNearby(HOME);
+      if (my!==token) return;
+      PLACES = [...PLACES, ...near];
+      $("src").textContent = near.length ? `${HOME.label} 반경 25km 내 장소 ${near.length}곳 (OpenStreetMap 기준, 정보가 부족할 수 있어요)` : "주변에서 추천할 장소를 찾지 못했어요.";
+    }catch(e){
+      if (my!==token) return;
+      $("src").textContent = "주변 장소를 불러오지 못했어요. 잠시 후 지역을 다시 선택해 주세요.";
+    }
+    await weatherP;
+    if (my!==token) return;
+    state.results = w ? rank(w,j) : rank({feel:20,wind:0},{score:70});
+    renderList();
   }
 }
-init();
+
+// 시작: 저장된 지역이 없으면 의왕시청
+(function start(){
+  let sido="경기도", city="의왕";
+  try{ const s = JSON.parse(store.get("th-region")||"null"); if(s && REGIONS[s[0]] && REGIONS[s[0]].some(c=>c[0]===s[1])){ sido=s[0]; city=s[1]; } }catch(e){}
+  applyTheme(); fillSido(sido); fillCity(sido, city); setRegion(sido, city);
+})();
 </script>
 </body>
 </html>
