@@ -179,6 +179,62 @@ const CURATED = [
   {name:"어린이대공원", e:"🐘", type:"mix", lat:37.5480, lon:127.0810, stay:"3~4시간", parking:"유료", age:5, tip:"동물원·놀이시설·잔디밭", q:"서울 어린이대공원"},
   {name:"롯데월드 어드벤처", e:"🎡", type:"mix", lat:37.5110, lon:127.0980, stay:"5~7시간", parking:"유료(혼잡)", age:4, tip:"실내 + 야외 혼합. 주말 혼잡", q:"롯데월드 어드벤처"}
 ];
+// 지역별 대표 명소(좌표는 대략값, 길찾기는 이름 검색 링크 사용): [이름, 이모지, 유형, 위도, 경도, 체류, 아이적합도, 팁, 물놀이]
+const EXTRA = [
+ ["부산 아쿠아리움","🐠","in",35.1587,129.1604,"2~3시간",5,"해운대 바로 앞 수족관, 날씨 영향 없음"],
+ ["국립해양박물관","🚢","in",35.0786,129.0820,"2~3시간",4,"영도 바닷가, 체험 전시 풍부"],
+ ["해운대해수욕장","🏖️","out",35.1587,129.1604,"1~3시간",4,"여름 물놀이, 사계절 산책","w"],
+ ["롯데월드 어드벤처 부산","🎡","mix",35.1927,129.2258,"4~6시간",4,"기장 놀이공원, 실내·야외 혼합"],
+ ["국립부산과학관","🔬","mix",35.2005,129.2036,"3~4시간",5,"과학 체험 전시, 예약 확인"],
+ ["이월드","🎢","out",35.8531,128.5660,"4~6시간",4,"대구 놀이공원, 83타워 야경"],
+ ["대구수목원","🌿","out",35.8300,128.5190,"1~2시간",3,"넓은 수목원 산책"],
+ ["국립대구과학관","🔬","mix",35.7282,128.7095,"3~4시간",5,"과학 체험 전시"],
+ ["송도 센트럴파크","🌆","out",37.3924,126.6396,"1~2시간",3,"수상택시·자전거·산책"],
+ ["월미도","🎠","out",37.4745,126.5987,"2~3시간",4,"월미테마파크, 바다 구경"],
+ ["국립생물자원관","🦋","in",37.4630,126.6270,"2시간",4,"생물 전시, 무료"],
+ ["우치공원","🦓","out",35.2230,126.8870,"2~3시간",4,"동물원·놀이시설"],
+ ["국립아시아문화전당","🏛️","in",35.1469,126.9197,"2~3시간",3,"어린이문화원 체험 포함"],
+ ["대전오월드","🦁","out",36.2897,127.3991,"3~5시간",5,"동물원·플라워랜드·놀이시설"],
+ ["국립중앙과학관","🔬","mix",36.3753,127.3768,"3~4시간",5,"과학 체험, 야외 전시"],
+ ["엑스포과학공원","🎡","mix",36.3790,127.3870,"2~3시간",4,"한빛탑, 사이언스 체험"],
+ ["울산대공원","🌳","out",35.5257,129.3149,"2~3시간",4,"넓은 공원, 놀이터"],
+ ["대왕암공원","🌊","out",35.4940,129.4260,"1~2시간",3,"바다 절벽 산책, 출렁다리"],
+ ["울산고래박물관","🐋","in",35.5199,129.3763,"1~2시간",4,"고래 전시·체험"],
+ ["세종호수공원","🦢","out",36.4980,127.2650,"1~2시간",4,"호수 산책, 자전거"],
+ ["에버랜드","🎢","mix",37.2939,127.2020,"6~8시간",5,"용인 놀이공원·동물원"],
+ ["한국민속촌","🏯","out",37.2590,127.1180,"3~4시간",4,"전통 체험, 공연"],
+ ["수원화성","🏰","out",37.2870,127.0110,"2~3시간",3,"성곽 산책, 화성열차"],
+ ["소양강스카이워크","🌉","out",37.9490,127.7240,"1시간",3,"춘천 소양강 위 스카이워크"],
+ ["경포해변","🏖️","out",37.8050,128.9080,"1~3시간",4,"강릉 해변 산책·물놀이","w"],
+ ["설악산 소공원","⛰️","out",38.1710,128.4660,"2~4시간",3,"케이블카·비선대 산책"],
+ ["소금산 그랜드밸리","🌉","out",37.4153,127.8167,"2~3시간",3,"원주 출렁다리·울렁다리"],
+ ["청주랜드","🦒","out",36.6560,127.4300,"2~3시간",5,"동물원·놀이시설"],
+ ["청남대","🌲","out",36.4510,127.4800,"2~3시간",3,"대청호 대통령 별장 산책"],
+ ["독립기념관","🏛️","mix",36.7840,127.2230,"2~3시간",3,"천안, 넓은 야외+전시관"],
+ ["공산성","🏰","out",36.4630,127.1190,"1~2시간",3,"공주 성곽 산책"],
+ ["전주한옥마을","🏘️","out",35.8150,127.1530,"2~3시간",3,"한복·먹거리 체험"],
+ ["국립무형유산원","🎎","in",35.8112,127.1507,"1~2시간",3,"전통 공연·체험"],
+ ["군산 시간여행마을","🚋","out",35.9880,126.7140,"1~2시간",3,"근대 거리 체험"],
+ ["아쿠아플라넷 여수","🐠","in",34.7390,127.7460,"2~3시간",5,"대형 수족관"],
+ ["순천만국가정원","🌷","out",34.9300,127.5020,"3~4시간",4,"정원 산책, 스카이큐브"],
+ ["유달산","⛰️","out",34.7956,126.3720,"1~2시간",3,"목포 바다 전망 산책"],
+ ["경주월드","🎢","out",35.8370,129.2830,"4~6시간",4,"놀이공원·워터파크"],
+ ["불국사","🛕","out",35.7900,129.3320,"1~2시간",3,"유네스코 사찰 산책"],
+ ["영일대 해수욕장","🌅","out",36.0617,129.3828,"1~2시간",3,"포항 해변 산책","w"],
+ ["하회마을","🏘️","out",36.5390,128.5180,"2~3시간",3,"전통 마을 체험"],
+ ["금오산","⛰️","out",36.1030,128.3180,"2~3시간",3,"케이블카·올레길"],
+ ["진주성","🏯","out",35.1892,128.0805,"1~2시간",3,"성곽 산책, 임진왜란 역사"],
+ ["국립진주박물관","🏛️","in",35.1900,128.0890,"1~2시간",3,"역사 전시, 어린이 체험"],
+ ["통영 케이블카","🚡","out",34.8160,128.4280,"1~2시간",4,"미륵산 전망"],
+ ["가야테마파크","🏯","out",35.2150,128.8700,"2~3시간",4,"김해 가야 체험"],
+ ["국립제주박물관","🏛️","in",33.5080,126.5680,"1~2시간",3,"역사 전시"],
+ ["한라수목원","🌿","out",33.4720,126.4910,"1~2시간",3,"제주 도심 수목원"],
+ ["협재해수욕장","🏖️","out",33.3940,126.2390,"1~3시간",4,"에메랄드빛 바다, 물놀이","w"],
+ ["천지연폭포","💧","out",33.2470,126.5550,"1시간",3,"서귀포 폭포 산책"],
+ ["성산일출봉","🌄","out",33.4580,126.9420,"1~2시간",3,"유네스코 자연유산 등반"],
+ ["아쿠아플라넷 제주","🐠","in",33.4340,126.9280,"2~3시간",5,"국내 최대급 수족관"]
+];
+CURATED.push(...EXTRA.map(([name,e,type,lat,lon,stay,age,tip,w])=>({name,e,type,lat,lon,stay,parking:"현장 확인",age,tip,q:name,water:!!w})));
 let PLACES = CURATED; // 선택 지역에 맞게 교체됨
 const TYPE_LABEL = {in:"실내", out:"야외", mix:"실내+야외"};
 
@@ -190,13 +246,13 @@ const wcode = c => c===0?["맑음","☀️"]:c<=3?["구름","⛅"]:c<=48?["안�
 const $ = id => document.getElementById(id);
 
 // ---------- 날씨 ----------
-async function getJSON(url, tries=3){
+async function getJSON(url, tries=3, ms=10000){
   let last;
   for (let i=0;i<tries;i++){
     try{
       // 미리보기 환경은 fetch 옵션(AbortSignal 등)을 복제하지 못하므로 옵션 없이 호출하고 타임아웃은 race로 처리
       let timer;
-      const timeout = new Promise((_,rej)=>{ timer = setTimeout(()=>rej(new Error("시간 초과")), 10000); });
+      const timeout = new Promise((_,rej)=>{ timer = setTimeout(()=>rej(new Error("시간 초과")), ms); });
       const r = await Promise.race([fetch(url), timeout]); clearTimeout(timer);
       if(!r.ok) throw new Error("HTTP "+r.status);
       return await r.json();
@@ -316,7 +372,7 @@ $("filters").addEventListener("click", e=>{
 });
 
 // ---------- 주변 장소 (OpenStreetMap Overpass) ----------
-const OVERPASS = ["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
+const OVERPASS = ["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"];
 const CAT = {
   zoo:{e:"🦁",type:"out",stay:"3~4시간",age:5,tip:"동물원 · 아이들이 좋아해요. 우천 시 비추천"},
   aquarium:{e:"🐠",type:"in",stay:"2~3시간",age:5,tip:"수족관 · 날씨 영향 없이 즐길 수 있어요"},
@@ -337,22 +393,19 @@ function catOf(t){
   return null;
 }
 async function overpass(query){
-  let last;
-  for (const ep of OVERPASS){
-    try{ return await getJSON(ep+"?data="+encodeURIComponent(query),1); }catch(e){ last=e; }
-  }
-  throw last;
+  const qs = "?data="+encodeURIComponent(query);
+  return Promise.any(OVERPASS.map(ep=>getJSON(ep+qs,1,25000)));
 }
 async function loadNearby(c){
   const key = "th-near-"+c.lat.toFixed(3)+","+c.lon.toFixed(3);
   try{ const hit = JSON.parse(localStorage.getItem(key)||"null"); if(hit && Date.now()-hit.t<7*864e5) return hit.v; }catch(e){}
-  const a = `(around:25000,${c.lat},${c.lon})`;
-  const q = `[out:json][timeout:25];(
+  const a = `(around:20000,${c.lat},${c.lon})`;
+  const q = `[out:json][timeout:20];(
     nwr["tourism"~"^(zoo|aquarium|theme_park|museum)$"]["name"]${a};
     nwr["leisure"="water_park"]["name"]${a};
     nwr["leisure"~"^(park|nature_reserve)$"]["name"]["wikidata"]${a};
     nwr["tourism"="attraction"]["name"]["wikidata"]${a};
-  );out center tags 250;`;
+  );out center tags 150;`;
   const d = await overpass(q), seen = new Set(), out = [];
   for (const el of d.elements||[]){
     const t = el.tags||{}, name = t["name:ko"]||t.name, cat = catOf(t);
@@ -423,17 +476,17 @@ async function init(){
       <div class="help">• 앱 내 미리보기가 아니라 <b>크롬에서 직접</b> 열어 주세요 (run.bat 실행).<br>• 광고 차단 확장 프로그램이 api.open-meteo.com 을 막고 있지 않은지 확인하세요.<br>• 아래 목록은 날씨 없이 기본 순서(맑음 가정)입니다.</div>
       <button class="btn" onclick="init()">다시 시도</button>`; });
 
-  // 큐레이션이 충분하지 않은 지역은 OpenStreetMap에서 주변 장소를 가져온다
-  if (PLACES.length < 8){
-    $("src").textContent = `${HOME.label} 주변 장소를 찾는 중…`;
+  // 큐레이션이 충분하지 않은 지역은 OpenStreetMap에서 추가 장소를 가져온다
+  if (PLACES.length < 12){
+    $("src").textContent = `${HOME.label} 주변 추가 장소를 찾는 중… (기본 추천은 먼저 표시)`;
     try{
       const near = await loadNearby(HOME);
       if (my!==token) return;
       PLACES = [...PLACES, ...near];
-      $("src").textContent = near.length ? `${HOME.label} 반경 25km 내 장소 ${near.length}곳 (OpenStreetMap 기준, 정보가 부족할 수 있어요)` : "주변에서 추천할 장소를 찾지 못했어요.";
+      $("src").textContent = near.length ? `${HOME.label} 반경 20km 내 추가 장소 ${near.length}곳 (OpenStreetMap 기준, 정보가 부족할 수 있어요)` : "주변에서 추가로 찾은 장소는 없어요.";
     }catch(e){
       if (my!==token) return;
-      $("src").textContent = "주변 장소를 불러오지 못했어요. 잠시 후 지역을 다시 선택해 주세요.";
+      $("src").innerHTML = '추가 장소를 불러오지 못했어요 (기본 추천만 표시). <button class="btn" style="margin:0 0 0 6px;padding:3px 12px" onclick="init()">다시 시도</button>';
     }
     await weatherP;
     if (my!==token) return;
