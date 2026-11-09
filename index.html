@@ -169,7 +169,7 @@ const REGIONS = {
   "경상남도":[["창원",35.2280,128.6811],["진주",35.1800,128.1076],["통영",34.8544,128.4332],["김해",35.2285,128.8894]],
   "제주특별자치도":[["제주",33.4996,126.5312],["서귀포",33.2541,126.5601]]
 };
-let HOME = {lat:37.3448, lon:126.9683, label:"의왕시청"};
+let HOME = {lat:37.3448, lon:126.9683, label:"의왕시"};
 // type: in(실내) / out(야외) / mix(혼합) · water: 물놀이 · age: 8세 적합도(1~5)
 const CURATED = [
   {name:"한국철도박물관", e:"🚂", type:"in", lat:37.3418, lon:126.9548, stay:"2~3시간", parking:"무료 주차장", age:5, tip:"기차 실물 전시·시뮬레이터. 실내 중심이고 야외 전시도 있음", q:"한국철도박물관"},
@@ -494,7 +494,7 @@ async function loadNearby(c){
   // 가까운 곳 + 비중 높은 곳 우선으로 40개만
   out.sort((x,y)=>(y._p*8 - km(c,y)*0.6) - (x._p*8 - km(c,x)*0.6));
   const v = out.slice(0,40);
-  try{ localStorage.setItem(key, JSON.stringify({t:Date.now(),v})); }catch(e){}
+  if (v.length){ try{ localStorage.setItem(key, JSON.stringify({t:Date.now(),v})); }catch(e){} }
   return v;
 }
 
@@ -523,11 +523,11 @@ function fillSido(sel){
   $("selSido").innerHTML = Object.keys(REGIONS).map(n=>`<option ${n===sel?"selected":""}>${n}</option>`).join("");
 }
 function fillCity(sido, sel){
-  $("selCity").innerHTML = REGIONS[sido].map(c=>`<option value="${c[0]}" ${c[0]===sel?"selected":""}>${c[0]}${sido==="세종특별자치시"?"":"시"}청 기준</option>`).join("");
+  $("selCity").innerHTML = REGIONS[sido].map(c=>`<option value="${c[0]}" ${c[0]===sel?"selected":""}>${c[0]}${sido==="세종특별자치시"?"":"시"}</option>`).join("");
 }
 function setRegion(sido, city){
   const c = REGIONS[sido].find(x=>x[0]===city) || REGIONS[sido][0];
-  HOME = {lat:c[1], lon:c[2], label:c[0]+"시청"};
+  HOME = {lat:c[1], lon:c[2], label:c[0]+(sido==="세종특별자치시"?"":"시")};
   store.set("th-region", JSON.stringify([sido,c[0]]));
   $("heroSub").textContent = `${HOME.label} 출발 · 8살 아들과 함께하는 나들이`;
   return init();
@@ -541,6 +541,7 @@ async function init(){
   PLACES = curatedNear();
   state.results = rank({feel:20,wind:0}, {score:70});
   renderList();
+  if (!PLACES.length) $("list").innerHTML = '<div class="loading"><div class="spin"></div>추천 장소 찾는 중…</div>';
   $("src").textContent = "";
   $("weatherCard").innerHTML = '<div class="loading"><div class="spin"></div>날씨 확인 중…</div>';
 
@@ -552,12 +553,13 @@ async function init(){
       <button class="btn" onclick="init()">다시 시도</button>`; });
 
   // 큐레이션이 충분하지 않은 지역은 OpenStreetMap에서 추가 장소를 가져온다
-  if (PLACES.length < 12){
+  {
     $("src").textContent = `${HOME.label} 주변 추가 장소를 찾는 중… (기본 추천은 먼저 표시)`;
     try{
       const near = await loadNearby(HOME);
       if (my!==token) return;
-      PLACES = [...PLACES, ...near];
+      const have = new Set(PLACES.map(p=>p.name));
+      PLACES = [...PLACES, ...near.filter(p=>!have.has(p.name))];
       $("src").textContent = near.length ? `${HOME.label} 반경 20km 내 추가 장소 ${near.length}곳 (OpenStreetMap 기준, 정보가 부족할 수 있어요)` : "주변에서 추가로 찾은 장소는 없어요.";
     }catch(e){
       if (my!==token) return;
@@ -570,7 +572,7 @@ async function init(){
   }
 }
 
-// 시작: 저장된 지역이 없으면 의왕시청
+// 시작: 저장된 지역이 없으면 의왕시
 (function start(){
   let sido="경기도", city="의왕";
   try{ const s = JSON.parse(store.get("th-region")||"null"); if(s && REGIONS[s[0]] && REGIONS[s[0]].some(c=>c[0]===s[1])){ sido=s[0]; city=s[1]; } }catch(e){}
