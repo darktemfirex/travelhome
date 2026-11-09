@@ -369,7 +369,7 @@ function rank(w, j){
   return PLACES.map(p=>{
     const t = driveMin(p);
     const fit = p.type==="in" ? 100-out : p.type==="out" ? out : 70;
-    let s = fit*0.6 + p.age*4 - Math.max(0,t-30)*0.35;
+    let s = fit*0.6 + p.age*4 - Math.max(0,t-15)*0.6;
     if (p.water && w.feel>=28 && out>=40) s += 15;
     const st = openStatus(p, now);
     s -= st.pen;
@@ -504,7 +504,7 @@ const store = {
   set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 };
 let token = 0;
-const curatedNear = () => CURATED.filter(p=>km(HOME,p)<=60);
+const curatedNear = () => CURATED.filter(p=>km(HOME,p)<=20);
 
 function applyTheme(t){
   if (t) document.documentElement.setAttribute("data-theme", t);
