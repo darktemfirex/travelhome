@@ -317,7 +317,7 @@ const wcode = c => c===0?["맑음","☀️"]:c<=3?["구름","⛅"]:c<=48?["안�
 const $ = id => document.getElementById(id);
 
 // ---------- 날씨 ----------
-async function getJSON(url, tries=3, ms=10000){
+async function getJSON(url, tries=3, ms=6000){
   let last;
   for (let i=0;i<tries;i++){
     try{
@@ -332,11 +332,13 @@ async function getJSON(url, tries=3, ms=10000){
   throw last;
 }
 async function loadWeather(){
-  const f = `https://api.open-meteo.com/v1/forecast?latitude=${HOME.lat}&longitude=${HOME.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=precipitation_probability&timezone=Asia%2FSeoul&forecast_days=1`;
+  const f = `https://api.open-meteo.com/v1/forecast?latitude=${HOME.lat}&longitude=${HOME.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=precipitation_probability&timezone=Asia%2FSeoul&forecast_days=2`;
   const a = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${HOME.lat}&longitude=${HOME.lon}&current=pm10,pm2_5&timezone=Asia%2FSeoul`;
   const [w, air] = await Promise.all([getJSON(f), getJSON(a,1).catch(()=>null)]);
-  const now = new Date().getHours();
-  const probs = w.hourly.precipitation_probability.slice(now, now+6);
+  // 기기 시간대와 무관하게 API가 준 현재 시각(Asia/Seoul)을 기준으로 앞으로 6시간 구간을 잡는다
+  const idx = w.hourly.time.findIndex(t => t >= w.current.time.slice(0,13)+":00");
+  const start = idx<0 ? 0 : idx;
+  const probs = w.hourly.precipitation_probability.slice(start, start+6).filter(v=>v!=null);
   return {
     temp:w.current.temperature_2m, feel:w.current.apparent_temperature, code:w.current.weather_code,
     wind:w.current.wind_speed_10m, rain:Math.max(...probs,0),
