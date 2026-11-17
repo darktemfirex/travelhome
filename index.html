@@ -371,7 +371,7 @@ function rank(w, j){
   return PLACES.map(p=>{
     const t = driveMin(p);
     const fit = p.type==="in" ? 100-out : p.type==="out" ? out : 70;
-    let s = fit*0.6 + p.age*4 - Math.max(0,t-15)*0.6;
+    let s = fit*0.6 + p.age*4 + 10 - t*0.8; // 거리 감점 강화: 이동시간 1분당 0.8점 (면제 구간 없음)
     if (p.water && w.feel>=28 && out>=40) s += 15;
     const st = openStatus(p, now);
     s -= st.pen;
@@ -473,10 +473,10 @@ async function overpass(query){
   const qs = "?data="+encodeURIComponent(query);
   return Promise.any(OVERPASS.map(ep=>getJSON(ep+qs,1,25000)));
 }
-async function loadNearby(c){
-  const key = "th-near2-"+c.lat.toFixed(3)+","+c.lon.toFixed(3);
+async function loadNearby(c, rKm=RADIUS){
+  const key = "th-near3-"+rKm+"-"+c.lat.toFixed(3)+","+c.lon.toFixed(3);
   try{ const hit = JSON.parse(localStorage.getItem(key)||"null"); if(hit && Date.now()-hit.t<7*864e5) return hit.v; }catch(e){}
-  const a = `(around:20000,${c.lat},${c.lon})`;
+  const a = `(around:${rKm*1000},${c.lat},${c.lon})`;
   const q = `[out:json][timeout:20];(
     nwr["tourism"~"^(zoo|aquarium|theme_park|museum)$"]["name"]${a};
     nwr["leisure"="water_park"]["name"]${a};
@@ -506,7 +506,9 @@ const store = {
   set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 };
 let token = 0;
-const curatedNear = () => CURATED.filter(p=>km(HOME,p)<=20);
+// 기본 12km, 후보가 너무 적으면 20km까지 넓힌다 (인접한 시끼리 추천이 겹치지 않도록 반경을 좁힘)
+const RADIUS = 12, RADIUS_MAX = 20, MIN_PLACES = 5;
+const curatedNear = (r=RADIUS) => CURATED.filter(p=>km(HOME,p)<=r);
 
 function applyTheme(t){
   if (t) document.documentElement.setAttribute("data-theme", t);
@@ -558,11 +560,15 @@ async function init(){
   {
     $("src").textContent = `${HOME.label} 주변 추가 장소를 찾는 중… (기본 추천은 먼저 표시)`;
     try{
-      const near = await loadNearby(HOME);
+      let r = RADIUS, near = await loadNearby(HOME, r);
       if (my!==token) return;
-      const have = new Set(PLACES.map(p=>p.name));
-      PLACES = [...PLACES, ...near.filter(p=>!have.has(p.name))];
-      $("src").textContent = near.length ? `${HOME.label} 반경 20km 내 추가 장소 ${near.length}곳 (OpenStreetMap 기준, 정보가 부족할 수 있어요)` : "주변에서 추가로 찾은 장소는 없어요.";
+      if (curatedNear(r).length + near.length < MIN_PLACES){ // 후보 부족 → 반경 확대
+        r = RADIUS_MAX; near = await loadNearby(HOME, r);
+        if (my!==token) return;
+      }
+      const have = new Set();
+      PLACES = [...curatedNear(r), ...near].filter(p=>!have.has(p.name) && have.add(p.name));
+      $("src").textContent = near.length ? `${HOME.label} 반경 ${r}km 내 추가 장소 ${near.length}곳 (OpenStreetMap 기준, 정보가 부족할 수 있어요)` : "주변에서 추가로 찾은 장소는 없어요.";
     }catch(e){
       if (my!==token) return;
       $("src").innerHTML = '추가 장소를 불러오지 못했어요 (기본 추천만 표시). <button class="btn" style="margin:0 0 0 6px;padding:3px 12px" onclick="init()">다시 시도</button>';
