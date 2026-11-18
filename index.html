@@ -532,7 +532,6 @@ function fillCity(sido, sel){
 function setRegion(sido, city){
   const c = REGIONS[sido].find(x=>x[0]===city) || REGIONS[sido][0];
   HOME = {lat:c[1], lon:c[2], label:c[0]+(sido==="세종특별자치시"?"":"시")};
-  store.set("th-region", JSON.stringify([sido,c[0]]));
   $("heroSub").textContent = `${HOME.label} 출발 · 8살 아들과 함께하는 나들이`;
   return init();
 }
@@ -580,10 +579,10 @@ async function init(){
   }
 }
 
-// 시작: 저장된 지역이 없으면 의왕시
+// 시작: 항상 의왕시
 (function start(){
   let sido="경기도", city="의왕";
-  try{ const s = JSON.parse(store.get("th-region")||"null"); if(s && REGIONS[s[0]] && REGIONS[s[0]].some(c=>c[0]===s[1])){ sido=s[0]; city=s[1]; } }catch(e){}
+  try{ localStorage.removeItem("th-region"); }catch(e){} // 지역은 저장하지 않고 항상 의왕시로 시작
   applyTheme(); fillSido(sido); fillCity(sido, city); setRegion(sido, city);
 })();
 
