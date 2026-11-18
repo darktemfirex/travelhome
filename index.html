@@ -317,24 +317,35 @@ const wcode = c => c===0?["맑음","☀️"]:c<=3?["구름","⛅"]:c<=48?["안�
 const $ = id => document.getElementById(id);
 
 // ---------- 날씨 ----------
-async function getJSON(url, tries=3, ms=6000){
+const live = new Set();   // 진행 중인 요청의 AbortController (태그로 구분해 일괄 취소)
+let useSignal = true;    // 미리보기 환경처럼 AbortSignal을 못 쓰면 false로 내려서 옵션 없이 호출
+async function getJSON(url, tries=3, ms=12000, tag=""){
   let last;
   for (let i=0;i<tries;i++){
+    const ctrl = (useSignal && typeof AbortController!=="undefined") ? new AbortController() : null;
+    if (ctrl){ ctrl.tag = tag; live.add(ctrl); }
+    let timer;
     try{
-      // 미리보기 환경은 fetch 옵션(AbortSignal 등)을 복제하지 못하므로 옵션 없이 호출하고 타임아웃은 race로 처리
-      let timer;
-      const timeout = new Promise((_,rej)=>{ timer = setTimeout(()=>rej(new Error("시간 초과")), ms); });
-      const r = await Promise.race([fetch(url), timeout]); clearTimeout(timer);
+      const timeout = new Promise((_,rej)=>{ timer = setTimeout(()=>{ try{ ctrl && ctrl.abort(); }catch(e){} rej(new Error("시간 초과")); }, ms); });
+      let req;
+      try{ req = ctrl ? fetch(url, {signal:ctrl.signal}) : fetch(url); }catch(e){ useSignal = false; req = fetch(url); }
+      const r = await Promise.race([req, timeout]);
       if(!r.ok) throw new Error("HTTP "+r.status);
       return await r.json();
-    }catch(e){ last = e; await new Promise(res=>setTimeout(res, 800*(i+1))); }
+    }catch(e){
+      if (e && e.name==="DataCloneError") useSignal = false;
+      last = e;
+      if (e && e.name==="AbortError" && tag && ctrl && ctrl.cancelled) throw e; // 의도적 취소는 재시도하지 않음
+      if (i<tries-1) await new Promise(res=>setTimeout(res, 1000*2**i)); // 1초, 2초 (지수 백오프)
+    }finally{ clearTimeout(timer); if (ctrl) live.delete(ctrl); }
   }
   throw last;
 }
+function cancelLive(tag){ live.forEach(c=>{ if(c.tag===tag){ c.cancelled = true; try{ c.abort(); }catch(e){} } }); }
 async function loadWeather(){
   const f = `https://api.open-meteo.com/v1/forecast?latitude=${HOME.lat}&longitude=${HOME.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=precipitation_probability&timezone=Asia%2FSeoul&forecast_days=2`;
   const a = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${HOME.lat}&longitude=${HOME.lon}&current=pm10,pm2_5&timezone=Asia%2FSeoul`;
-  const [w, air] = await Promise.all([getJSON(f), getJSON(a,1).catch(()=>null)]);
+  const [w, air] = await Promise.all([getJSON(f), getJSON(a,1,6000).catch(()=>null)]);
   // 기기 시간대와 무관하게 API가 준 현재 시각(Asia/Seoul)을 기준으로 앞으로 6시간 구간을 잡는다
   const idx = w.hourly.time.findIndex(t => t >= w.current.time.slice(0,13)+":00");
   const start = idx<0 ? 0 : idx;
@@ -344,6 +355,14 @@ async function loadWeather(){
     wind:w.current.wind_speed_10m, rain:Math.max(...probs,0),
     pm10:air?.current?.pm10 ?? null, pm25:air?.current?.pm2_5 ?? null
   };
+}
+
+const WCACHE_MS = 30*60*1000;
+const wKey = () => "th-weather-"+HOME.lat.toFixed(3)+","+HOME.lon.toFixed(3);
+function saveWeather(w){ try{ localStorage.setItem(wKey(), JSON.stringify({t:Date.now(), v:w})); }catch(e){} }
+function readWeather(){
+  try{ const h = JSON.parse(localStorage.getItem(wKey())||"null"); if(h && Date.now()-h.t<=WCACHE_MS) return {v:h.v, ageMin:Math.max(1,Math.round((Date.now()-h.t)/60000))}; }catch(e){}
+  return null;
 }
 
 function judge(w){
@@ -390,7 +409,7 @@ function rank(w, j){
 // ---------- 렌더 ----------
 const state = {results:[], filter:"all"};
 
-function renderWeather(w,j){
+function renderWeather(w,j,staleMin){
   const [desc,ico] = wcode(w.code);
   const grade = (v,bad,worse)=> v==null?"-": v>worse?"매우 나쁨": v>bad?"나쁨":"좋음~보통";
   // 히어로 배경을 날씨에 맞게
@@ -407,7 +426,8 @@ function renderWeather(w,j){
       <div class="chip"><span class="t">😷 초미세먼지</span><b>${w.pm25==null?"-":Math.round(w.pm25)+" · "+grade(w.pm25,35,75)}</b></div>
       <div class="chip"><span class="t">🌫️ 미세먼지</span><b>${w.pm10==null?"-":Math.round(w.pm10)+" · "+grade(w.pm10,80,150)}</b></div>
     </div>
-    <div class="verdict ${j.level}">${j.text}${j.why.length?`<small>${j.why.join(" · ")}</small>`:""}</div>`;
+    <div class="verdict ${j.level}">${j.text}${j.why.length?`<small>${j.why.join(" · ")}</small>`:""}</div>
+    ${staleMin?`<div class="help">⚠️ 최신 날씨를 불러오지 못해 ${staleMin}분 전 정보를 보여주고 있어요. <button class="btn" style="margin:0 0 0 6px;padding:3px 12px" onclick="init()">다시 시도</button></div>`:""}`;
 }
 
 function renderList(){
@@ -471,7 +491,7 @@ function catOf(t){
 }
 async function overpass(query){
   const qs = "?data="+encodeURIComponent(query);
-  return Promise.any(OVERPASS.map(ep=>getJSON(ep+qs,1,25000)));
+  return Promise.any(OVERPASS.map(ep=>getJSON(ep+qs,1,25000,"op")));
 }
 async function loadNearby(c, rKm=RADIUS){
   const key = "th-near3-"+rKm+"-"+c.lat.toFixed(3)+","+c.lon.toFixed(3);
@@ -540,6 +560,7 @@ $("selCity").addEventListener("change", ()=> setRegion($("selSido").value, $("se
 
 async function init(){
   const my = ++token;
+  cancelLive("op"); // 지역을 바꾸면 이전 지역의 주변 장소 조회는 중단
   // 큐레이션 목록(수도권 근처)을 먼저 보여주고, 날씨와 주변 장소를 비동기로 채운다
   PLACES = curatedNear();
   state.results = rank({feel:20,wind:0}, {score:70});
@@ -549,8 +570,10 @@ async function init(){
   $("weatherCard").innerHTML = '<div class="loading"><div class="spin"></div>날씨 확인 중…</div>';
 
   let w=null, j=null;
-  const weatherP = loadWeather().then(x=>{ if(my!==token) return; w=x; j=judge(x); renderWeather(w,j); state.results=rank(w,j); renderList(); })
+  const weatherP = loadWeather().then(x=>{ if(my!==token) return; saveWeather(x); w=x; j=judge(x); renderWeather(w,j); state.results=rank(w,j); renderList(); })
     .catch(e=>{ if(my!==token) return;
+      const c = readWeather();
+      if (c){ w=c.v; j=judge(w); renderWeather(w,j,c.ageMin); state.results=rank(w,j); renderList(); return; }
       $("weatherCard").innerHTML = `<div class="err">날씨를 불러오지 못했어요 (${e.message})</div>
       <div class="help">• 앱 내 미리보기가 아니라 <b>크롬에서 직접</b> 열어 주세요 (run.bat 실행).<br>• 광고 차단 확장 프로그램이 api.open-meteo.com 을 막고 있지 않은지 확인하세요.<br>• 아래 목록은 날씨 없이 기본 순서(맑음 가정)입니다.</div>
       <button class="btn" onclick="init()">다시 시도</button>`; });
@@ -558,6 +581,8 @@ async function init(){
   // 큐레이션이 충분하지 않은 지역은 OpenStreetMap에서 추가 장소를 가져온다
   {
     $("src").textContent = `${HOME.label} 주변 추가 장소를 찾는 중… (기본 추천은 먼저 표시)`;
+    await weatherP; // 날씨 요청이 끝난 뒤에 주변 장소 조회를 시작해 모바일 회선을 나눠 쓰지 않게 함
+    if (my!==token) return;
     try{
       let r = RADIUS, near = await loadNearby(HOME, r);
       if (my!==token) return;
